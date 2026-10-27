@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="阿里 Cluster Trace GPU v2026 按实际 GPU 型号估算的每日、每周 24 时段功率与用电量交互看板">
+  <title>算电协同 · 每日每周时段功率看板</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">⚡</div>
+      <div>
+        <h1>算电协同数据中心看板</h1>
+        <p>Cluster Trace GPU v2026 · 实际 GPU 型号 · 中位 TDP</p>
+      </div>
+    </div>
+    <nav aria-label="主导航">
+      <button class="nav-btn active" data-section="dashboard">交互看板</button>
+      <button class="nav-btn" data-section="data">数据下载</button>
+      <button class="nav-btn" data-section="method">方法与来源</button>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <section id="dashboard" class="page-section active">
+      <div class="intro-row">
+        <div>
+          <span class="eyebrow">INTERACTIVE EXPLORER</span>
+          <h2>185 天 × 24 时段功率与用电量</h2>
+          <p class="intro-copy">选择按天、按周或全周期查看。图表、摘要卡片和 24 时段明细会同步更新；时间段 0–1 表示 00:00–01:00。</p>
+        </div>
+        <div class="status-pill"><span class="status-dot"></span><span id="statusText">数据加载中</span></div>
+      </div>
+
+      <section class="control-panel" aria-label="看板筛选条件">
+        <label>统计层级
+          <select id="viewLevel">
+            <option value="daily">按天查看</option>
+            <option value="weekly">按周查看</option>
+            <option value="full">全周期 24 时段</option>
+          </select>
+        </label>
+        <label>主显示口径
+          <select id="layer">
+            <option value="facility">数据中心侧</option>
+            <option value="it">IT 侧</option>
+            <option value="gpu">GPU 侧</option>
+            <option value="server_non_gpu">服务器非 GPU</option>
+          </select>
+        </label>
+        <label>显示指标
+          <select id="metric">
+            <option value="power">功率（MW）</option>
+            <option value="energy">用电量（kWh / MWh）</option>
+          </select>
+        </label>
+        <label id="periodLabel">选择日期
+          <select id="period"></select>
+        </label>
+        <div class="constant-box"><span>固定情景</span><strong>中位 TDP</strong><small>PUE = 1.56</small></div>
+      </section>
+
+      <section class="metric-cards" aria-label="当前选择摘要">
+        <article class="metric-card"><span id="totalEnergyLabel">当前范围总用电量</span><strong id="totalEnergy">—</strong><small id="totalEnergyHint">数据中心侧</small></article>
+        <article class="metric-card"><span id="averagePowerLabel">平均功率</span><strong id="averagePower">—</strong><small id="averagePowerHint">当前口径</small></article>
+        <article class="metric-card"><span>时段峰值功率</span><strong id="peakPower">—</strong><small>当前选择范围</small></article>
+        <article class="metric-card"><span>当前明细行数</span><strong id="slotCount">—</strong><small id="scopeHint">24 个时段</small></article>
+      </section>
+
+      <section class="chart-grid">
+        <article class="chart-card chart-card-large">
+          <div class="chart-heading"><div><h3 id="profileTitle">24 时段剖面</h3><p>同时展示 GPU 侧、服务器非 GPU、IT 侧和数据中心侧</p></div><span class="unit-badge" id="profileUnit">MW</span></div>
+          <div id="profileChart" class="plot" role="img" aria-label="24 个时间段的功率或用电量曲线"></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-heading"><div><h3 id="trendTitle">全周期趋势</h3><p>观察当前主显示口径在天或周之间的变化</p></div></div>
+          <div id="trendChart" class="plot" role="img" aria-label="功率或用电量趋势"></div>
+        </article>
+      </section>
+
+      <section class="table-card">
+        <div class="chart-heading"><div><h3>当前 24 个时段明细</h3><p id="tableHint">功率和用电量对应同一个小时区间。</p></div></div>
+        <div class="table-wrap"><table id="detailTable"><thead></thead><tbody></tbody></table></div>
+      </section>
+    </section>
+
+    <section id="data" class="page-section">
+      <div class="section-heading"><span class="eyebrow">DATA LIBRARY</span><h2>处理后的数据集</h2><p>这些文件可以直接下载，用于论文制图、统计分析和结果复核。网页图表与下载文件使用同一批结果。</p></div>
+      <div class="data-grid" id="datasetList"></div>
+      <div class="note-box"><strong>数据范围</strong><p>本次统计包含 185 个 relative trace day、4,440 个小时记录和 27 个连续周。功率字段单位为 MW；每日用电量单位为 kWh；网页按需要换算为 MWh 或 GWh 显示。</p></div>
+    </section>
+
+    <section id="method" class="page-section">
+      <div class="section-heading"><span class="eyebrow">METHOD & SOURCES</span><h2>方法与来源</h2><p>网页展示的是按实际型号标签和公开功率参数估算的结果，不是阿里数据中心的电表实测。</p></div>
+      <div class="method-grid">
+        <article class="method-card"><h3>当前计算情景</h3><pre>GPU功率：中位 TDP × 利用率函数
+IT功率：GPU功率 + 服务器非 GPU 功率
+数据中心功率：IT功率 × PUE
+PUE = 1.56</pre><p>GPU 型号标签来自 trace；XPU-A～XPU-E 属于匿名型号桶，使用参数表中的中位敏感性值。</p></article>
+        <article class="method-card"><h3>日、周统计规则</h3><ul><li>每日：保留每个 relative trace day 的 24 个小时段。</li><li>每周：按连续 7 天分组，第 1 周为 day 0–6。</li><li>周功率：该周同一时段的日均功率。</li><li>周用电量：该周同一时段的累计用电量。</li></ul></article>
+        <article class="method-card"><h3>参数与限制</h3><p>公开 GPU TDP、服务器非 GPU 折算参数和 PUE 来源记录在下载区的参数 CSV 与说明文档中。</p><p>由于缺少服务器 PDU 实测、确切 GPU 子型号和完整设施电表，结果适合负荷曲线与情景比较，不能替代真实电费结算。</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><span>算电协同研究 · 中文交互式数据看板</span><span>数据来源：Alibaba Cluster Trace GPU v2026 处理结果</span></footer>
+
+  <script src="plotly.min.js?v=20261027"></script>
+  <script src="data.js?v=20261027"></script>
+  <script src="app.js?v=20261027"></script>
+</body>
+</html>
